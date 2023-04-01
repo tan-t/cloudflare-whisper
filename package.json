@@ -1,0 +1,23 @@
+{
+  "name": "cloudflare-whisper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "wrangler dev src/index.ts",
+    "deploy": "wrangler publish src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20230321.0",
+    "prettier": "^2.8.7",
+    "typescript": "^5.0.3",
+    "wrangler": "^2.13.0"
+  },
+  "dependencies": {
+    "hono": "^3.1.5",
+    "openai": "^3.2.1"
+  }
+}

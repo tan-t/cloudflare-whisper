@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <meta charset="UTF-8" />
+  <title>Page Title</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <body>
+    <div>
+      <input type="text" placeholder="議題（例：OpenAI APIの検証について）" id="agenda" />
+      <button type="button" id="start">start streaming</button>
+      <button type="button" id="stop">stop streaming</button>
+    </div>
+
+    <script type="text/javascript">
+      const getSampleRate = stream => {
+        const audioTrack = stream.getAudioTracks()[0];
+        const settings = audioTrack.getSettings();
+        return settings.sampleRate;
+      };
+      window.onload = () => {
+        const main = () => {
+          const agenda = document.getElementById('agenda').value;
+          const context = new AudioContext();
+          navigator.getUserMedia(
+            { audio: true },
+            async stream => {
+              const session = await fetch('/stream', {
+                method: 'POST',
+                // ここにいろいろなメタデータ的な情報を入れる。
+                body: JSON.stringify({ sampleRate: getSampleRate(stream), agenda }),
+                headers: { 'Content-Type': 'application/json' },
+              }).then(res => res.json());
+
+              if (!('id' in session)) {
+                throw new Error(session);
+              }
+
+              const sessionId = session.id;
+              const options = { mimeType: 'audio/webm' };
+              const input = context.createMediaStreamSource(stream);
+              const processor = context.createScriptProcessor(1024, 1, 1);
+              const isTLSEnabled = new URL(window.location.href).protocol === 'https:';
+              const connection = new WebSocket(
+                `ws${isTLSEnabled ? 's' : ''}://${new URL(window.location.href).host}/streams/${sessionId}/websocket`,
+              );
+
+              input.connect(processor);
+              processor.connect(context.destination);
+
+              connection.addEventListener('open', () => {
+                processor.onaudioprocess = function (e) {
+                  const voice = e.inputBuffer.getChannelData(0);
+                  var bufferData = new Float32Array(1024);
+                  for (var i = 0; i < 1024; i++) {
+                    bufferData[i] = voice[i];
+                  }
+                  connection.send(bufferData);
+                };
+              });
+
+              connection.addEventListener('message', msg => {
+                window.document.getElementById('output').textContent += JSON.parse(msg.data).transcribed;
+              });
+
+              window.document.getElementById('stop').onclick = async () => {
+                connection.close();
+                context.close();
+                const res = await fetch(`/streams/${sessionId}/result`).then(res => res.json());
+                window.document.getElementById('output').textContent += '[RESULT]';
+                window.document.getElementById('output').textContent += res.result;
+              };
+            },
+            console.error,
+          );
+        };
+
+        window.document.getElementById('start').onclick = main;
+      };
+    </script>
+    <div id="output"></div>
+  </body>
+</html>

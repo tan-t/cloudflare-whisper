@@ -1,0 +1,17 @@
+name = "cloudflare-whisper"
+compatibility_date = "2022-02-12"
+
+[durable_objects]
+bindings = [{name = "AUDIO_STREAM", class_name = "AudioStream"}]
+
+[[migrations]]
+tag = "v1" # Should be unique for each entry
+new_classes = ["AudioStream"]
+
+[[r2_buckets]]
+binding = 'AUDIO_BUCKET'
+bucket_name = 'cloudflare-whisper-prod'
+preview_bucket_name = 'cloudflare-whisper-dev'
+
+[site]
+bucket = './assets'
